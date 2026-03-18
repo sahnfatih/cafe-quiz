@@ -8,6 +8,9 @@ sed -i "s/APP_PORT/$REAL_PORT/g" /etc/nginx/sites-enabled/default
 echo "==> Running migrations..."
 php artisan migrate --force
 
+echo "==> Creating storage symlink..."
+php artisan storage:link --force 2>/dev/null || true
+
 echo "==> Creating admin user with proper bcrypt hash..."
 php artisan tinker --execute="
 \$user = App\Models\User::firstOrNew(['email' => 'admin@cafequiz.com']);

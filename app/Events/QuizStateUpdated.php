@@ -57,6 +57,7 @@ class QuizStateUpdated implements ShouldBroadcastNow
                 'option_d'       => $this->question->option_d,
                 'media_type'     => $this->question->media_type,
                 'image_path'     => $this->question->image_path,
+                'video_path'     => $this->question->video_path,
                 'youtube_url'    => $this->question->youtube_url,
                 'youtube_start'  => $this->question->youtube_start,
                 'youtube_end'    => $this->question->youtube_end,

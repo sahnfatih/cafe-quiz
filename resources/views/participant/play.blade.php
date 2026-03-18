@@ -112,18 +112,6 @@
                 </p>
             </div>
 
-            {{-- Medya Alanı (görsel / video) --}}
-            <div id="play-media-area">
-                <div id="play-image-wrapper" class="hidden rounded-2xl overflow-hidden border border-slate-700/40">
-                    <img id="play-question-image" src="" alt=""
-                         class="w-full max-h-44 object-contain rounded-2xl">
-                </div>
-                <div id="play-video-wrapper" class="hidden rounded-2xl overflow-hidden border border-slate-700/40">
-                    <video id="play-question-video" controls muted playsinline
-                           class="w-full max-h-44 rounded-2xl" src=""></video>
-                </div>
-            </div>
-
             {{-- Şıklar --}}
             <div id="options-container" class="grid grid-cols-2 gap-2.5 flex-1">
                 @foreach(['A'=>['sky','hover:border-sky-500/60 hover:bg-sky-500/5'], 'B'=>['violet','hover:border-violet-500/60 hover:bg-violet-500/5'], 'C'=>['amber','hover:border-amber-500/60 hover:bg-amber-500/5'], 'D'=>['rose','hover:border-rose-500/60 hover:bg-rose-500/5']] as $letter=>[$col,$hov])
@@ -153,6 +141,7 @@
                 </div>
                 <p class="text-base font-black text-sky-300">✅ Cevabın Alındı!</p>
                 <p class="text-xs text-slate-500">Diğer oyuncular cevaplıyor…</p>
+                <p id="score-feedback" class="hidden text-sm font-black text-emerald-300 pop-in"></p>
             </div>
 
             {{-- Süre Doldu Overlay --}}
@@ -216,7 +205,6 @@ const JOIN_URL          = @json(route('participant.join', $session->code));
 const TIME_LIMIT        = @json($session->time_limit);
 const STARTED_AT_MS     = @json($session->current_question_started_at
     ? $session->current_question_started_at->getTimestampMs() : null);
-const STORAGE_BASE      = '{{ asset('storage') }}';
 
 /* ── DOM ── */
 const statusEl         = document.getElementById('status-line');
@@ -232,6 +220,7 @@ const finishedMsg      = document.getElementById('finished-msg');
 const timerWrap        = document.getElementById('timer-wrap');
 const timerRing        = document.getElementById('timer-ring');
 const timerText        = document.getElementById('timer-text');
+const scoreFeedback    = document.getElementById('score-feedback');
 
 /* ── Durum ── */
 let currentQuestionId  = INITIAL_QUESTION?.id  ?? null;
@@ -307,31 +296,6 @@ function setOptionTexts(q) {
     const map={A:q.option_a,B:q.option_b,C:q.option_c,D:q.option_d};
     document.querySelectorAll('.option-label').forEach(el=>{ el.textContent=map[el.dataset.for]||''; });
 }
-function clearPlayMedia() {
-    const iw=document.getElementById('play-image-wrapper');
-    const vw=document.getElementById('play-video-wrapper');
-    const v=document.getElementById('play-question-video');
-    if(iw) iw.classList.add('hidden');
-    if(vw) vw.classList.add('hidden');
-    if(v)  { v.pause(); v.src=''; }
-}
-function setPlayMedia(q) {
-    clearPlayMedia();
-    if(!q) return;
-    if(q.media_type==='image'&&q.image_path){
-        const iw=document.getElementById('play-image-wrapper');
-        const img=document.getElementById('play-question-image');
-        img.src=STORAGE_BASE+'/'+q.image_path;
-        iw.classList.remove('hidden');
-    } else if(q.media_type==='video'&&q.video_path){
-        const vw=document.getElementById('play-video-wrapper');
-        const v=document.getElementById('play-question-video');
-        v.src=STORAGE_BASE+'/'+q.video_path;
-        vw.classList.remove('hidden');
-        v.play().catch(()=>{});
-    }
-}
-
 /* ── Ekran geçişleri ── */
 function showScreen(name) {
     waitingScreen.classList.add('hidden');
@@ -348,11 +312,11 @@ function showNewQuestion(q, tl, sat) {
     statusEl.textContent       = q.points + ' puanlık soru';
     questionTextEl.textContent = q.text;
     setOptionTexts(q);
-    setPlayMedia(q);
     clearAnswerHighlight();
     setButtonsDisabled(false);
     waitingOverlay.classList.add('hidden');
     timeoutOverlay.classList.add('hidden');
+    if(scoreFeedback) scoreFeedback.classList.add('hidden');
     optionsContainer.classList.remove('hidden');
     startTimer(tl ?? currentTimeLimit, sat ?? currentStartedAtMs);
 }
@@ -429,9 +393,20 @@ window.addEventListener('load', () => {
                 if (mySelectedOption) {
                     const ok = mySelectedOption===correct;
                     statusEl.textContent = ok ? '✅ Doğru cevap verdiniz!' : `❌ Yanlış! Doğru: ${correct}`;
-                    if(ok) playCorrect(); else playWrong();
+                    if(ok) {
+                        playCorrect();
+                        // Puan feedback göster
+                        if(scoreFeedback && q.points) {
+                            scoreFeedback.textContent = '🎯 +' + q.points + ' puan kazandınız!';
+                            scoreFeedback.classList.remove('hidden');
+                        }
+                    } else {
+                        playWrong();
+                        if(scoreFeedback) scoreFeedback.classList.add('hidden');
+                    }
                 } else {
                     statusEl.textContent = `💡 Doğru cevap: ${correct}`;
+                    if(scoreFeedback) scoreFeedback.classList.add('hidden');
                 }
                 waitingOverlay.classList.add('hidden');
                 timeoutOverlay.classList.add('hidden');
@@ -443,7 +418,6 @@ window.addEventListener('load', () => {
 
         /* Lobby — bekleme ekranına dön */
         if (mode === 'lobby' || (!q && mode !== 'show_results' && mode !== 'finish' && mode !== 'show_all_results')) {
-            clearPlayMedia();
             currentQuestionId  = null;
             hasAnsweredCurrent = false;
             mySelectedOption   = null;
@@ -454,7 +428,6 @@ window.addEventListener('load', () => {
         /* Bitti */
         if (mode === 'show_results' || mode === 'finish' || mode === 'show_all_results') {
             playFinished();
-            clearPlayMedia();
             showScreen('finished');
             if(finishedMsg) finishedMsg.textContent = 'Sonuçlar büyük ekranda gösteriliyor. Tebrikler! 🎉';
             return;

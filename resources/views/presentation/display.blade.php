@@ -64,16 +64,16 @@
             </div>
 
             <div id="options-area" class="mt-8 grid grid-cols-2 gap-4 text-xl font-semibold">
-                <div class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                <div id="option-wrap-A" class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 transition-all duration-500">
                     <span class="text-sky-400 mr-2">A)</span><span id="opt-a"></span>
                 </div>
-                <div class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                <div id="option-wrap-B" class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 transition-all duration-500">
                     <span class="text-sky-400 mr-2">B)</span><span id="opt-b"></span>
                 </div>
-                <div class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                <div id="option-wrap-C" class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 transition-all duration-500">
                     <span class="text-sky-400 mr-2">C)</span><span id="opt-c"></span>
                 </div>
-                <div class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                <div id="option-wrap-D" class="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 transition-all duration-500">
                     <span class="text-sky-400 mr-2">D)</span><span id="opt-d"></span>
                 </div>
             </div>
@@ -112,44 +112,76 @@
     const sessionCode = @json($session->code);
     const initialPayload = @json($initialQuestion);
 
+    /* Şık wrapperlarının renklerini sıfırla */
+    function resetOptionColors() {
+        ['A','B','C','D'].forEach(opt => {
+            const el = document.getElementById('option-wrap-' + opt);
+            if (!el) return;
+            el.className = 'rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 transition-all duration-500';
+        });
+    }
+
+    /* Doğru cevabı büyük ekranda renklendir */
+    function revealCorrectOption(correctOpt) {
+        ['A','B','C','D'].forEach(opt => {
+            const el = document.getElementById('option-wrap-' + opt);
+            if (!el) return;
+            if (opt === correctOpt) {
+                el.className = 'rounded-2xl border-2 border-emerald-400 bg-emerald-500/20 px-4 py-3 scale-105 transition-all duration-500 shadow-lg shadow-emerald-500/30';
+            } else {
+                el.className = 'rounded-2xl border border-slate-700/50 bg-slate-900/40 px-4 py-3 opacity-40 transition-all duration-500';
+            }
+        });
+    }
+
     function updateQuestion(payload) {
-        const q = payload.question;
+        const q    = payload.question;
         const mode = payload.mode;
-        const top = payload.top_participants || [];
+        const top  = payload.top_participants || [];
 
-        const status = document.getElementById('status-line');
-        const textEl = document.getElementById('question-text');
-        const optA = document.getElementById('opt-a');
-        const optB = document.getElementById('opt-b');
-        const optC = document.getElementById('opt-c');
-        const optD = document.getElementById('opt-d');
+        const status        = document.getElementById('status-line');
+        const textEl        = document.getElementById('question-text');
+        const optA          = document.getElementById('opt-a');
+        const optB          = document.getElementById('opt-b');
+        const optC          = document.getElementById('opt-c');
+        const optD          = document.getElementById('opt-d');
+        const imgWrapper    = document.getElementById('image-wrapper');
+        const img           = document.getElementById('question-image');
+        const ytWrapper     = document.getElementById('youtube-wrapper');
+        const ytIframe      = document.getElementById('youtube-iframe');
+        const scoreboard    = document.getElementById('scoreboard');
+        const scoreboardList= document.getElementById('scoreboard-list');
+        const qrPanel       = document.getElementById('qr-panel');
 
-        const imgWrapper = document.getElementById('image-wrapper');
-        const img = document.getElementById('question-image');
-        const ytWrapper = document.getElementById('youtube-wrapper');
-        const ytIframe = document.getElementById('youtube-iframe');
-        const scoreboard = document.getElementById('scoreboard');
-        const scoreboardList = document.getElementById('scoreboard-list');
-        const qrPanel = document.getElementById('qr-panel');
+        /* ── Doğru cevabı göster (reveal) ── */
+        if (mode === 'reveal') {
+            if (q && q.correct_option) {
+                status.textContent = '💡 Doğru Cevap: ' + q.correct_option;
+                revealCorrectOption(q.correct_option);
+            }
+            return;
+        }
 
+        /* ── Sonuçları göster ── */
         if (mode === 'show_results' || mode === 'finish') {
-            status.textContent = 'Sonuçlar';
+            status.textContent = '🏆 Sonuçlar';
+            resetOptionColors();
             scoreboard.classList.remove('hidden');
             scoreboardList.innerHTML = '';
-            top.forEach((p, index) => {
+            top.forEach((p, i) => {
                 const li = document.createElement('li');
-                li.textContent = `${index + 1}. ${p.name} – ${p.total_score} puan (+${p.total_speed_bonus} hız)`;
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+                li.textContent = `${medal} ${p.name} – ${p.total_score} puan (+${p.total_speed_bonus} hız bonusu)`;
                 scoreboardList.appendChild(li);
             });
-            if (qrPanel) {
-                qrPanel.classList.add('hidden');
-            }
+            if (qrPanel) qrPanel.classList.add('hidden');
             launchConfetti();
             return;
         }
 
         scoreboard.classList.add('hidden');
         scoreboardList.innerHTML = '';
+        resetOptionColors();
 
         if (!q) {
             status.textContent = 'Hazırlanıyor… QR kodu tarayıp yarışmaya katılabilirsiniz.';
@@ -158,18 +190,16 @@
             imgWrapper.classList.add('hidden');
             ytWrapper.classList.add('hidden');
             ytIframe.src = '';
-            if (qrPanel) {
-                qrPanel.classList.remove('hidden');
-            }
+            if (qrPanel) qrPanel.classList.remove('hidden');
             return;
         }
 
         status.textContent = `${q.points} puanlık soru`;
-        textEl.textContent = q.text;
-        optA.textContent = q.option_a || '';
-        optB.textContent = q.option_b || '';
-        optC.textContent = q.option_c || '';
-        optD.textContent = q.option_d || '';
+        textEl.textContent  = q.text;
+        optA.textContent    = q.option_a || '';
+        optB.textContent    = q.option_b || '';
+        optC.textContent    = q.option_c || '';
+        optD.textContent    = q.option_d || '';
 
         imgWrapper.classList.add('hidden');
         ytWrapper.classList.add('hidden');
@@ -180,18 +210,16 @@
             img.src = `{{ asset('storage') }}/${q.image_path}`;
         } else if (q.media_type === 'youtube' && q.youtube_url) {
             ytWrapper.classList.remove('hidden');
-            const url = new URL(q.youtube_url);
+            const url     = new URL(q.youtube_url);
             const videoId = url.searchParams.get('v') || url.pathname.split('/').pop();
-            const start = q.youtube_start || 0;
-            const end = q.youtube_end || '';
+            const start   = q.youtube_start || 0;
+            const end     = q.youtube_end   || '';
             let src = `https://www.youtube.com/embed/${videoId}?autoplay=1&start=${start}`;
             if (end) src += `&end=${end}`;
             ytIframe.src = src;
         }
 
-        if (qrPanel) {
-            qrPanel.classList.add('hidden');
-        }
+        if (qrPanel) qrPanel.classList.add('hidden');
     }
 
     function launchConfetti() {
@@ -222,12 +250,18 @@
         updateQuestion(initialPayload);
     }
 
-    if (window.Echo) {
-        window.Echo.channel('quiz.session.' + sessionCode)
-            .listen('.QuizStateUpdated', (e) => {
-                updateQuestion(e);
-            });
+    function waitForEcho(tries) {
+        if (window.Echo) {
+            window.Echo.channel('quiz.session.' + sessionCode)
+                .listen('.QuizStateUpdated', (e) => {
+                    updateQuestion(e);
+                });
+            return;
+        }
+        if (tries <= 0) return;
+        setTimeout(() => waitForEcho(tries - 1), 100);
     }
+    waitForEcho(80);
 </script>
 </body>
 </html>

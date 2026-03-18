@@ -13,6 +13,8 @@ class PresentationSession extends Model
         'code',
         'admin_token',
         'status',
+        'time_limit',
+        'answers_locked',
         'current_question_id',
         'current_question_started_at',
         'started_at',
@@ -20,9 +22,11 @@ class PresentationSession extends Model
     ];
 
     protected $casts = [
-        'started_at' => 'datetime',
-        'ended_at' => 'datetime',
+        'started_at'                  => 'datetime',
+        'ended_at'                    => 'datetime',
         'current_question_started_at' => 'datetime',
+        'answers_locked'              => 'boolean',
+        'time_limit'                  => 'integer',
     ];
 
     public function quiz(): BelongsTo

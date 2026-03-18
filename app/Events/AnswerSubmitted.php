@@ -10,20 +10,20 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ParticipantJoined implements ShouldBroadcastNow
+class AnswerSubmitted implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
         public PresentationSession $session,
         public Participant $participant,
+        public string $selectedOption,
+        public int $questionId,
+        public array $answerCounts,   // ['A' => n, 'B' => n, 'C' => n, 'D' => n]
+        public int $totalAnswers,
+        public array $scoreboard,     // top 10 katılımcı
     ) {}
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, Channel>
-     */
     public function broadcastOn(): array
     {
         return [
@@ -33,7 +33,7 @@ class ParticipantJoined implements ShouldBroadcastNow
 
     public function broadcastAs(): string
     {
-        return 'ParticipantJoined';
+        return 'AnswerSubmitted';
     }
 
     public function broadcastWith(): array
@@ -42,11 +42,14 @@ class ParticipantJoined implements ShouldBroadcastNow
             'participant' => [
                 'id'                => $this->participant->id,
                 'name'              => $this->participant->name,
-                'team_name'         => $this->participant->team_name,
                 'total_score'       => $this->participant->total_score,
                 'total_speed_bonus' => $this->participant->total_speed_bonus,
+                'selected_option'   => $this->selectedOption,
             ],
-            'total' => $this->session->participants()->count(),
+            'question_id'   => $this->questionId,
+            'answer_counts' => $this->answerCounts,
+            'total_answers' => $this->totalAnswers,
+            'scoreboard'    => $this->scoreboard,
         ];
     }
 }

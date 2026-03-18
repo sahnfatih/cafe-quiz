@@ -39,8 +39,14 @@ Route::middleware('auth')->group(function () {
 Route::get('/display/{code}', DisplayBoard::class)->name('display.show');
 
 // Remote Controller (admin kumanda) - token zaten gizli olduğu için extra middleware yok
-Route::get('/remote/{adminToken}', [PresentationController::class, 'remote'])->name('remote.show');
-Route::post('/remote/{adminToken}/action', [PresentationController::class, 'control'])->name('remote.action');
+Route::get('/remote/{adminToken}',                             [PresentationController::class, 'remote'])->name('remote.show');
+Route::post('/remote/{adminToken}/action',                     [PresentationController::class, 'control'])->name('remote.action');
+Route::post('/remote/{adminToken}/lock',                       [PresentationController::class, 'lockAnswers'])->name('remote.lock');
+Route::post('/remote/{adminToken}/timer',                      [PresentationController::class, 'setTimer'])->name('remote.timer');
+Route::delete('/remote/{adminToken}/participants/{participant}',[PresentationController::class, 'kickParticipant'])->name('remote.kick');
+Route::get('/remote/{adminToken}/export',                      [PresentationController::class, 'exportResults'])->name('remote.export');
+Route::get('/remote/{adminToken}/analytics',                   [PresentationController::class, 'analytics'])->name('remote.analytics');
+Route::get('/remote/{adminToken}/qr',                          [PresentationController::class, 'qrFullscreen'])->name('remote.qr');
 
 // Participant (müşteri ekranı)
 Route::get('/join/{code}', [PresentationController::class, 'joinForm'])->name('participant.join');

@@ -26,6 +26,11 @@ class Board extends Component
     // Alpine ile iframe src'sini güncellemek için
     public ?string $videoUrl = null;
 
+    // Yeni özellikler
+    public int     $timeLimit    = 30;
+    public ?int    $startedAtMs  = null;
+    public bool    $answersLocked = false;
+
     public function mount(string $code): void
     {
         $this->session = PresentationSession::with(['quiz.questions' => fn ($q) => $q->orderBy('position')])
@@ -111,20 +116,32 @@ class Board extends Component
     // JS tarafında Echo ile yakalanan QuizStateUpdated payload'ını Livewire'a köprülemek için
     public function handleQuizUpdate(array $payload): void
     {
-        $this->session->status = $payload['session']['status'] ?? $this->session->status;
+        $this->session->status              = $payload['session']['status'] ?? $this->session->status;
         $this->session->current_question_id = $payload['session']['current_question_id'] ?? $this->session->current_question_id;
 
-        $this->mode = $payload['mode'] ?? $this->mode;
+        $mode = $payload['mode'] ?? $this->mode;
+        $this->mode           = $mode;
         $this->topParticipants = $payload['top_participants'] ?? [];
+        $this->timeLimit      = $payload['time_limit']     ?? $this->timeLimit;
+        $this->startedAtMs    = $payload['started_at_ms']  ?? $this->startedAtMs;
+        $this->answersLocked  = $payload['answers_locked'] ?? $this->answersLocked;
+
+        // reveal modunda sadece correct_option ihtiyacı var; soruyu değiştirme
+        if ($mode === 'reveal') {
+            if (!empty($payload['question']['correct_option']) && $this->question !== null) {
+                $this->question['correct_option'] = $payload['question']['correct_option'];
+            }
+            return;
+        }
 
         if (! empty($payload['question'])) {
             $qData = $payload['question'];
             $this->question = $qData;
 
             $this->videoUrl = $this->buildYoutubeEmbedUrl(
-                $qData['youtube_url'] ?? null,
+                $qData['youtube_url']   ?? null,
                 $qData['youtube_start'] ?? null,
-                $qData['youtube_end'] ?? null
+                $qData['youtube_end']   ?? null
             );
         } else {
             $this->question = null;

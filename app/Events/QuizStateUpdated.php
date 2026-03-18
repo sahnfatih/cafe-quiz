@@ -48,20 +48,31 @@ class QuizStateUpdated implements ShouldBroadcastNow
                 'current_question_id' => $this->session->current_question_id,
             ],
             'question' => $this->question ? [
-                'id' => $this->question->id,
-                'text' => $this->question->text,
-                'option_a' => $this->question->option_a,
-                'option_b' => $this->question->option_b,
-                'option_c' => $this->question->option_c,
-                'option_d' => $this->question->option_d,
-                'media_type' => $this->question->media_type,
-                'image_path' => $this->question->image_path,
-                'youtube_url' => $this->question->youtube_url,
-                'youtube_start' => $this->question->youtube_start,
-                'youtube_end' => $this->question->youtube_end,
+                'id'             => $this->question->id,
+                'text'           => $this->question->text,
+                'position'       => $this->question->position,
+                'option_a'       => $this->question->option_a,
+                'option_b'       => $this->question->option_b,
+                'option_c'       => $this->question->option_c,
+                'option_d'       => $this->question->option_d,
+                'media_type'     => $this->question->media_type,
+                'image_path'     => $this->question->image_path,
+                'youtube_url'    => $this->question->youtube_url,
+                'youtube_start'  => $this->question->youtube_start,
+                'youtube_end'    => $this->question->youtube_end,
+                'points'         => $this->question->points,
+                // Doğru cevap sadece reveal/show_results/finish modunda açıklanır
+                'correct_option' => in_array($this->mode, ['reveal', 'show_results', 'finish'])
+                    ? $this->question->correct_option
+                    : null,
             ] : null,
-            'mode' => $this->mode,
+            'mode'             => $this->mode,
             'top_participants' => $this->topParticipants,
+            'time_limit'       => $this->session->time_limit ?? 30,
+            'answers_locked'   => $this->session->answers_locked ?? false,
+            'started_at_ms'    => $this->session->current_question_started_at
+                                    ? $this->session->current_question_started_at->getTimestampMs()
+                                    : null,
         ];
     }
 }

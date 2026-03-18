@@ -11,6 +11,7 @@ class Participant extends Model
     protected $fillable = [
         'presentation_session_id',
         'name',
+        'team_name',
         'total_score',
         'total_speed_bonus',
     ];

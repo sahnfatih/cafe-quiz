@@ -416,7 +416,7 @@ class PresentationController extends Controller
 
         $now        = now();
         $start      = $session->current_question_started_at ?? $now;
-        $responseMs = max(0, $start->diffInMilliseconds($now));
+        $responseMs = (int) max(0, $start->diffInMilliseconds($now));
 
         $isCorrect  = $data['selected_option'] === $question->correct_option;
         $basePoints = $isCorrect ? $question->points : 0;

@@ -142,8 +142,8 @@ class QuizController extends Controller
             'correct_option' => ['required', 'in:A,B,C,D'],
             'points'         => ['required', 'integer', 'min:1'],
             'media_type'     => ['required', 'in:none,image,video,youtube'],
-            'image'          => ['nullable', 'image', 'max:5120'],
-            'video'          => ['nullable', 'mimetypes:video/mp4,video/webm,video/ogg', 'max:102400'],
+            'image'          => ['nullable', 'image', 'max:51200'],   // 50 MB
+            'video'          => ['nullable', 'mimetypes:video/mp4,video/webm,video/ogg', 'max:204800'], // 200 MB
             'youtube_url'    => ['nullable', 'url'],
             'youtube_start'  => ['nullable', 'integer', 'min:0'],
             'youtube_end'    => ['nullable', 'integer', 'min:0'],

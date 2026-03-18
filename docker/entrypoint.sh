@@ -5,6 +5,19 @@ set -e
 REAL_PORT=${PORT:-8000}
 sed -i "s/APP_PORT/$REAL_PORT/g" /etc/nginx/sites-enabled/default
 
+echo "==> Running migrations..."
+php artisan migrate --force
+
+echo "==> Creating admin user with proper bcrypt hash..."
+php artisan tinker --execute="
+\$user = App\Models\User::firstOrNew(['email' => 'admin@cafequiz.com']);
+\$user->name = 'Admin';
+\$user->email_verified_at = now();
+\$user->password = bcrypt('CafeAdmin2026!');
+\$user->save();
+echo 'Admin user ready.' . PHP_EOL;
+"
+
 echo "==> Starting PHP-FPM..."
 php-fpm -D
 

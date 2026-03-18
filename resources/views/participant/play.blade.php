@@ -1,75 +1,135 @@
 <!DOCTYPE html>
-<html lang="tr" class="h-full bg-slate-950">
+<html lang="tr" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <title>Cafe Quiz Pro · Oyuncu</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cafe Quiz · Oyuncu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         @keyframes bounce-dot {
-            0%, 100% { transform: translateY(0);    opacity: 0.4; }
-            50%       { transform: translateY(-8px); opacity: 1; }
+            0%, 100% { transform: translateY(0);     opacity: .35; }
+            50%       { transform: translateY(-11px); opacity: 1;   }
         }
         @keyframes countdown-pulse {
-            0%, 100% { transform: scale(1); }
-            50%       { transform: scale(1.12); }
+            0%, 100% { transform: scale(1);    }
+            50%       { transform: scale(1.18); }
         }
-        .bounce-dot { animation: bounce-dot 1.2s ease-in-out infinite; }
-        .timer-urgent { animation: countdown-pulse 0.6s ease-in-out infinite; }
+        @keyframes ping-ring {
+            0%   { transform: scale(1);   opacity: .5; }
+            100% { transform: scale(2.4); opacity: 0;  }
+        }
+        @keyframes slide-up {
+            from { transform: translateY(16px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)}
+            20%{transform:translateX(-6px)}
+            40%{transform:translateX(6px)}
+            60%{transform:translateX(-4px)}
+            80%{transform:translateX(4px)}
+        }
+        .bounce-dot  { animation: bounce-dot 1.3s ease-in-out infinite; }
+        .timer-urgent{ animation: countdown-pulse .5s ease-in-out infinite; }
+        .ping-ring   { animation: ping-ring 2s ease-out infinite; }
+        .slide-up    { animation: slide-up .35s ease-out both; }
+        * { -webkit-tap-highlight-color: transparent; }
+
+        /* Şık seçimi sonrası parlama efekti */
+        .answer-btn.selected-flash { animation: shake .4s ease-in-out; }
     </style>
 </head>
-<body class="h-full bg-slate-950 text-slate-50">
+<body class="h-full bg-slate-950 text-white antialiased">
 
-<div class="min-h-screen flex items-center justify-center px-4 py-6">
-    <div class="w-full max-w-md space-y-4">
+<div class="min-h-screen flex flex-col">
 
-        {{-- Header --}}
-        <header class="text-center">
-            <p class="text-xs text-slate-400 mb-0.5">
-                Kod: <span class="font-mono text-sky-400">{{ $session->code }}</span>
-            </p>
-            <h1 class="text-lg font-semibold">{{ $participant->name }}</h1>
-            @if($participant->team_name)
-            <p class="text-[11px] text-slate-500 mt-0.5">Takım: <span class="text-sky-300">{{ $participant->team_name }}</span></p>
-            @endif
-        </header>
-
-        {{-- ─ BEKLEME EKRANI ─ --}}
-        <div id="waiting-screen" class="{{ $currentQuestion ? 'hidden' : '' }} rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center space-y-5">
-            <div class="relative inline-block">
-                <div class="absolute inset-0 rounded-full bg-sky-500/20 animate-ping"></div>
-                <div class="relative h-16 w-16 rounded-full bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-3xl">
-                    🎮
-                </div>
-            </div>
-            <div class="space-y-1">
-                <p class="text-base font-semibold">Quiz başlamak üzere!</p>
-                <p class="text-xs text-slate-400">Sorular başladığında burada otomatik görünecek</p>
-            </div>
-            <div class="flex justify-center gap-2">
-                <span class="bounce-dot h-2.5 w-2.5 rounded-full bg-sky-500/60" style="animation-delay:0s"></span>
-                <span class="bounce-dot h-2.5 w-2.5 rounded-full bg-sky-500/60" style="animation-delay:0.2s"></span>
-                <span class="bounce-dot h-2.5 w-2.5 rounded-full bg-sky-500/60" style="animation-delay:0.4s"></span>
+    {{-- ──────────── HEADER ──────────── --}}
+    <header class="shrink-0 bg-slate-900/95 border-b border-slate-800/80 px-4 py-2.5
+                   flex items-center justify-between gap-3 safe-area-top">
+        <div class="flex items-center gap-2 min-w-0">
+            <div class="h-7 w-7 rounded-lg bg-gradient-to-br from-sky-500 to-violet-500
+                        flex items-center justify-center text-sm shrink-0">🎮</div>
+            <div class="min-w-0">
+                <p class="text-[10px] text-slate-500 leading-none">Kod</p>
+                <p class="font-mono font-black text-sky-400 text-sm tracking-widest leading-tight">{{ $session->code }}</p>
             </div>
         </div>
 
-        {{-- ─ SORU EKRANI ─ --}}
-        <main id="question-card"
-              class="{{ $currentQuestion ? '' : 'hidden' }} relative rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4 overflow-hidden transition-all duration-500">
+        <div class="flex items-center gap-2 min-w-0 justify-end">
+            <div class="text-right min-w-0">
+                <p class="text-sm font-bold text-white truncate leading-tight max-w-[150px]">{{ $participant->name }}</p>
+                @if($participant->team_name)
+                    <p class="text-[10px] text-violet-400 truncate leading-tight max-w-[150px]">{{ $participant->team_name }}</p>
+                @endif
+            </div>
+            <div class="shrink-0 h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500/20 to-sky-500/20
+                        border border-violet-500/30 flex items-center justify-center text-sm">
+                {{ mb_substr($participant->name, 0, 1) }}
+            </div>
+        </div>
+    </header>
 
-            {{-- Üst: Durum + Geri Sayım --}}
+    {{-- ──────────── CONTENT ──────────── --}}
+    <div class="flex-1 flex flex-col px-4 pt-4 pb-3 min-h-0 gap-3">
+
+        {{-- ── BEKLEME EKRANI ── --}}
+        <div id="waiting-screen"
+             class="{{ $currentQuestion ? 'hidden' : '' }} flex-1 flex flex-col items-center justify-center gap-6 text-center py-6">
+
+            {{-- Pulsing icon --}}
+            <div class="relative flex items-center justify-center mt-4">
+                <div class="ping-ring absolute h-28 w-28 rounded-full bg-sky-500/20"></div>
+                <div class="ping-ring absolute h-28 w-28 rounded-full bg-violet-500/15" style="animation-delay:.8s"></div>
+                <div class="relative h-24 w-24 rounded-3xl
+                            bg-gradient-to-br from-sky-500/20 to-violet-500/20
+                            border border-sky-500/25 shadow-xl shadow-sky-900/40
+                            flex items-center justify-center text-5xl">
+                    🎮
+                </div>
+            </div>
+
+            <div class="space-y-2 max-w-[260px]">
+                <h2 class="text-xl font-black text-white">Oyun Başlamak Üzere!</h2>
+                <p class="text-sm text-slate-400 leading-relaxed">
+                    Admin soruları başlattığında ekran otomatik güncellenir
+                </p>
+            </div>
+
+            {{-- Animasyonlu noktalar --}}
+            <div class="flex items-center gap-3">
+                <span class="bounce-dot h-3 w-3 rounded-full bg-sky-400"    style="animation-delay:.0s"></span>
+                <span class="bounce-dot h-3 w-3 rounded-full bg-violet-400" style="animation-delay:.22s"></span>
+                <span class="bounce-dot h-3 w-3 rounded-full bg-sky-400"    style="animation-delay:.44s"></span>
+            </div>
+
+            {{-- Bağlantı durumu --}}
+            <div class="flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 text-xs text-emerald-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Bağlandınız · Bekleniyor
+            </div>
+        </div>
+
+        {{-- ── SORU EKRANI ── --}}
+        <div id="question-card"
+             class="{{ $currentQuestion ? '' : 'hidden' }} relative flex-1 flex flex-col gap-3 overflow-hidden">
+
+            {{-- Durum + Geri Sayım --}}
             <div class="flex items-center justify-between gap-3">
-                <p id="status-line" class="text-sm text-slate-400 flex-1">
+                <p id="status-line"
+                   class="text-sm text-slate-300 font-semibold flex-1 leading-snug">
                     {{ $currentQuestion ? $currentQuestion->points.' puanlık soru' : '' }}
                 </p>
 
-                {{-- Geri sayım --}}
-                <div id="timer-wrap" class="{{ $session->time_limit > 0 ? '' : 'hidden' }} relative h-12 w-12 shrink-0">
-                    <svg class="absolute inset-0 -rotate-90" viewBox="0 0 48 48">
+                {{-- Timer ring --}}
+                <div id="timer-wrap"
+                     class="{{ $session->time_limit > 0 ? '' : 'hidden' }} relative h-13 w-13 shrink-0"
+                     style="height:52px;width:52px">
+                    <svg class="absolute inset-0 -rotate-90 w-full h-full" viewBox="0 0 48 48">
                         <circle cx="24" cy="24" r="20" fill="none" stroke="#1e293b" stroke-width="4"/>
-                        <circle id="timer-ring" cx="24" cy="24" r="20" fill="none" stroke="#38bdf8" stroke-width="4"
-                                stroke-dasharray="125.7" stroke-dashoffset="0" stroke-linecap="round"
+                        <circle id="timer-ring" cx="24" cy="24" r="20" fill="none" stroke="#38bdf8"
+                                stroke-width="4" stroke-dasharray="125.7" stroke-dashoffset="0"
+                                stroke-linecap="round"
                                 style="transition: stroke-dashoffset 0.9s linear, stroke 0.3s"/>
                     </svg>
                     <div id="timer-text"
@@ -79,50 +139,118 @@
                 </div>
             </div>
 
-            {{-- Soru metni --}}
-            <p id="question-text" class="text-base font-semibold min-h-[2.5rem]">
-                {{ $currentQuestion ? $currentQuestion->text : '' }}
-            </p>
+            {{-- Soru Metni --}}
+            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/80 px-4 py-4 min-h-[80px] flex items-center">
+                <p id="question-text"
+                   class="text-[15px] font-bold leading-snug text-white w-full">
+                    {{ $currentQuestion ? $currentQuestion->text : '' }}
+                </p>
+            </div>
 
-            {{-- Şıklar --}}
-            <div id="options-container" class="grid grid-cols-2 gap-3">
-                @foreach(['A','B','C','D'] as $opt)
-                <button type="button" data-option="{{ $opt }}"
-                        class="answer-btn rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-3 text-sm font-semibold
-                               hover:border-sky-500 disabled:opacity-40 disabled:cursor-not-allowed text-left
-                               transition-all duration-300">
-                    <span class="text-sky-400">{{ $opt }})</span>
-                    <span class="option-label ml-1" data-for="{{ $opt }}">
-                        {{ $currentQuestion ? $currentQuestion->{'option_'.strtolower($opt)} : '' }}
+            {{-- Cevap Şıkları --}}
+            <div id="options-container" class="grid grid-cols-2 gap-2.5 flex-1">
+
+                {{-- A --}}
+                <button type="button" data-option="A"
+                        class="answer-btn group relative flex flex-col rounded-2xl
+                               border border-slate-700/80 bg-slate-900/90
+                               p-3 text-left gap-2
+                               hover:border-sky-500/60 hover:bg-sky-500/5
+                               disabled:opacity-40 disabled:cursor-not-allowed
+                               active:scale-[.97] transition-all duration-150 min-h-[84px]">
+                    <span class="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-xl
+                                 bg-sky-500 text-white text-[11px] font-black shadow-md shadow-sky-900/40
+                                 group-hover:scale-110 transition-transform">A</span>
+                    <span class="option-label text-[13px] text-slate-200 leading-snug flex-1 w-full" data-for="A">
+                        {{ $currentQuestion ? $currentQuestion->option_a : '' }}
                     </span>
                 </button>
-                @endforeach
+
+                {{-- B --}}
+                <button type="button" data-option="B"
+                        class="answer-btn group relative flex flex-col rounded-2xl
+                               border border-slate-700/80 bg-slate-900/90
+                               p-3 text-left gap-2
+                               hover:border-violet-500/60 hover:bg-violet-500/5
+                               disabled:opacity-40 disabled:cursor-not-allowed
+                               active:scale-[.97] transition-all duration-150 min-h-[84px]">
+                    <span class="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-xl
+                                 bg-violet-500 text-white text-[11px] font-black shadow-md shadow-violet-900/40
+                                 group-hover:scale-110 transition-transform">B</span>
+                    <span class="option-label text-[13px] text-slate-200 leading-snug flex-1 w-full" data-for="B">
+                        {{ $currentQuestion ? $currentQuestion->option_b : '' }}
+                    </span>
+                </button>
+
+                {{-- C --}}
+                <button type="button" data-option="C"
+                        class="answer-btn group relative flex flex-col rounded-2xl
+                               border border-slate-700/80 bg-slate-900/90
+                               p-3 text-left gap-2
+                               hover:border-amber-500/60 hover:bg-amber-500/5
+                               disabled:opacity-40 disabled:cursor-not-allowed
+                               active:scale-[.97] transition-all duration-150 min-h-[84px]">
+                    <span class="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-xl
+                                 bg-amber-500 text-white text-[11px] font-black shadow-md shadow-amber-900/40
+                                 group-hover:scale-110 transition-transform">C</span>
+                    <span class="option-label text-[13px] text-slate-200 leading-snug flex-1 w-full" data-for="C">
+                        {{ $currentQuestion ? $currentQuestion->option_c : '' }}
+                    </span>
+                </button>
+
+                {{-- D --}}
+                <button type="button" data-option="D"
+                        class="answer-btn group relative flex flex-col rounded-2xl
+                               border border-slate-700/80 bg-slate-900/90
+                               p-3 text-left gap-2
+                               hover:border-rose-500/60 hover:bg-rose-500/5
+                               disabled:opacity-40 disabled:cursor-not-allowed
+                               active:scale-[.97] transition-all duration-150 min-h-[84px]">
+                    <span class="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-xl
+                                 bg-rose-500 text-white text-[11px] font-black shadow-md shadow-rose-900/40
+                                 group-hover:scale-110 transition-transform">D</span>
+                    <span class="option-label text-[13px] text-slate-200 leading-snug flex-1 w-full" data-for="D">
+                        {{ $currentQuestion ? $currentQuestion->option_d : '' }}
+                    </span>
+                </button>
+
             </div>
 
-            {{-- Kilitli overlay --}}
+            {{-- ── Cevap Gönderildi Overlay ── --}}
             <div id="waiting-overlay"
-                 class="{{ $currentQuestion && false ? '' : 'hidden' }} absolute inset-0 rounded-2xl bg-slate-950/90 backdrop-blur-sm
-                        flex flex-col items-center justify-center text-center px-6 z-10">
-                <div class="mb-3 h-10 w-10 rounded-full border-2 border-slate-700 border-t-sky-400 animate-spin"></div>
-                <div class="text-sm font-semibold text-slate-100 mb-1">✅ Cevabın kilitlendi</div>
-                <p class="text-xs text-slate-400">Diğer oyuncular cevaplıyor…<br>Sonraki soruda otomatik güncellenir.</p>
+                 class="{{ $currentQuestion && false ? '' : 'hidden' }}
+                        absolute inset-0 rounded-2xl bg-slate-950/95 backdrop-blur-md
+                        flex flex-col items-center justify-center gap-4 text-center px-6 z-20">
+                <div class="relative">
+                    <div class="h-16 w-16 rounded-full border-4 border-slate-700/50 border-t-sky-400 animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-xl">⏳</div>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-base font-black text-sky-300">✅ Cevabın Alındı!</p>
+                    <p class="text-xs text-slate-500">Diğer oyuncular cevaplıyor…<br>Sonraki soruda otomatik güncellenir.</p>
+                </div>
             </div>
 
-            {{-- Süre doldu overlay --}}
+            {{-- ── Süre Doldu Overlay ── --}}
             <div id="timeout-overlay"
-                 class="hidden absolute inset-0 rounded-2xl bg-slate-950/90 backdrop-blur-sm
-                        flex flex-col items-center justify-center text-center px-6 z-10">
-                <div class="text-4xl mb-3">⏰</div>
-                <div class="text-sm font-semibold text-rose-300 mb-1">Süre Doldu!</div>
-                <p class="text-xs text-slate-400">Cevaplar kilitlendi.</p>
+                 class="hidden absolute inset-0 rounded-2xl bg-slate-950/95 backdrop-blur-md
+                        flex flex-col items-center justify-center gap-4 text-center px-6 z-20">
+                <div class="text-5xl animate-bounce">⏰</div>
+                <div class="space-y-1">
+                    <p class="text-base font-black text-rose-300">Süre Doldu!</p>
+                    <p class="text-xs text-slate-500">Cevaplar kilitlendi.</p>
+                </div>
             </div>
 
-        </main>
-
-        {{-- Echo bağlantı göstergesi --}}
-        <p id="echo-status" class="text-center text-[10px] text-slate-600">Bağlanıyor…</p>
+        </div>
 
     </div>
+
+    {{-- ──────────── FOOTER ──────────── --}}
+    <footer class="shrink-0 pb-4 px-4">
+        <p id="echo-status" class="text-center text-[10px] text-slate-700">Bağlanıyor…</p>
+    </footer>
+
 </div>
 
 @php
@@ -344,12 +472,16 @@ function showFinished(msg) {
 function showKicked() {
     document.body.innerHTML = `
         <div class="min-h-screen flex items-center justify-center bg-slate-950 text-white px-6">
-            <div class="text-center space-y-4">
-                <div class="text-5xl">🚫</div>
-                <h1 class="text-xl font-bold">Oturumdan çıkarıldınız</h1>
-                <p class="text-slate-400 text-sm">Admin tarafından oturumdan çıkarıldınız.</p>
-                <a href="${JOIN_URL}" class="inline-block mt-4 rounded-xl bg-sky-500 px-5 py-2 text-sm font-medium text-white hover:bg-sky-400">
-                    Tekrar Katıl
+            <div class="text-center space-y-5">
+                <div class="text-6xl">🚫</div>
+                <div class="space-y-2">
+                    <h1 class="text-xl font-black">Oturumdan Çıkarıldınız</h1>
+                    <p class="text-slate-400 text-sm">Admin tarafından oturumdan çıkarıldınız.</p>
+                </div>
+                <a href="${JOIN_URL}" class="inline-flex items-center gap-2 mt-4 rounded-2xl
+                    bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-bold text-white
+                    hover:from-sky-400 hover:to-violet-400 active:scale-95 transition-all">
+                    Tekrar Katıl 🚀
                 </a>
             </div>
         </div>`;
@@ -440,9 +572,9 @@ window.addEventListener('load', function () {
                     clearAnswerHighlight();
                     document.querySelectorAll('.answer-btn').forEach(btn => {
                         const opt = btn.dataset.option;
-                        if (opt === correct)           btn.classList.add('border-emerald-500','bg-emerald-500/10');
+                        if (opt === correct)               btn.classList.add('border-emerald-500','bg-emerald-500/10');
                         else if (opt === mySelectedOption) btn.classList.add('border-rose-500','bg-rose-500/10','opacity-40');
-                        else                           btn.classList.add('opacity-40');
+                        else                               btn.classList.add('opacity-40');
                     });
                     if (mySelectedOption) {
                         const isCorrect = mySelectedOption === correct;

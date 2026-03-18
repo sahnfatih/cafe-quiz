@@ -21,219 +21,316 @@
     $initialTotal = array_sum($initialCounts);
 @endphp
 
-<div class="grid gap-4 lg:grid-cols-[2fr,3fr] mb-4">
-    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-lg space-y-4">
-        <h1 class="text-sm font-semibold">Oturum</h1>
+<style>
+    * { -webkit-tap-highlight-color: transparent; }
+    .ctrl-btn:active { transform: scale(.94); }
+    #question-list::-webkit-scrollbar { width: 4px; }
+    #question-list::-webkit-scrollbar-track { background: transparent; }
+    #question-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    #participant-list::-webkit-scrollbar { width: 4px; }
+    #participant-list::-webkit-scrollbar-track { background: transparent; }
+    #participant-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+</style>
 
-        <div class="flex items-center gap-4">
-            <div class="shrink-0 rounded-2xl border border-slate-700 bg-slate-950/80 p-2">
-                <img
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data={{ urlencode(route('participant.join', $session->code)) }}"
-                    alt="QR"
-                    class="h-32 w-32"
-                >
-            </div>
+<div class="space-y-4 pb-6">
 
-            <div class="space-y-2 text-xs text-slate-300 min-w-0 flex-1">
-                <button
-                    type="button"
-                    onclick="navigator.clipboard.writeText(@json(route('participant.join', $session->code)))"
-                    class="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-left font-mono text-[10px] text-sky-300 hover:border-sky-500 truncate"
-                    title="Kopyala"
-                >
-                    {{ route('participant.join', $session->code) }}
-                </button>
+{{-- ──────────── ÜST BÖLÜM: Oturum + Kontroller ──────────── --}}
+<div class="grid gap-4 lg:grid-cols-[2fr,3fr]">
 
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="{{ route('remote.qr', $session->admin_token) }}" target="_blank"
-                       class="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[10px] hover:border-sky-500">
-                        Tam Ekran QR
-                    </a>
-                    <a href="{{ route('display.show', $session->code) }}" target="_blank"
-                       class="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[10px] hover:border-violet-500">
-                        Sunum Ekranı
-                    </a>
-                </div>
+    {{-- ── Oturum Kartı ── --}}
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg space-y-4">
 
-                <div class="flex gap-4 text-[11px] text-slate-400 pt-1">
-                    <span>Katılımcı: <span id="participant-count" class="text-sky-300 font-semibold">{{ $session->participants->count() }}</span></span>
-                    <span>Soru: <span class="text-sky-300 font-semibold">{{ $session->quiz->questions->count() }}</span></span>
-                    <span>Kod: <span class="font-mono text-sky-300 font-semibold">{{ $session->code }}</span></span>
-                </div>
+        <div class="flex items-center justify-between">
+            <h1 class="text-sm font-black text-white">🎮 Oturum</h1>
+            <div class="flex items-center gap-1.5">
+                <span id="echo-dot" class="h-2 w-2 rounded-full bg-slate-600 shrink-0"></span>
+                <span id="echo-label" class="text-[10px] text-slate-500">Bağlanıyor…</span>
             </div>
         </div>
 
-        <div class="flex items-center gap-2 pt-1 border-t border-slate-800/60">
-            <span id="echo-dot" class="h-2 w-2 rounded-full bg-slate-600 shrink-0"></span>
-            <span id="echo-label" class="text-[10px] text-slate-500">Bağlanıyor…</span>
+        {{-- QR + Bilgiler --}}
+        <div class="flex items-start gap-4">
+            <div class="shrink-0 rounded-2xl border border-slate-700 bg-white p-2 shadow-md">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ urlencode(route('participant.join', $session->code)) }}"
+                     alt="QR" class="h-28 w-28 block rounded-lg">
+            </div>
+
+            <div class="flex-1 min-w-0 space-y-2">
+                {{-- Kod badge --}}
+                <div class="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-2">
+                    <span class="text-[10px] text-slate-400">Kod</span>
+                    <span class="font-mono font-black text-sky-300 text-lg tracking-[0.2em]">{{ $session->code }}</span>
+                </div>
+
+                {{-- İstatistikler --}}
+                <div class="grid grid-cols-3 gap-1.5">
+                    <div class="rounded-xl bg-slate-800/60 border border-slate-700/60 px-2 py-1.5 text-center">
+                        <p id="participant-count" class="text-base font-black text-sky-300">{{ $session->participants->count() }}</p>
+                        <p class="text-[9px] text-slate-500">Oyuncu</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-800/60 border border-slate-700/60 px-2 py-1.5 text-center">
+                        <p class="text-base font-black text-violet-300">{{ $session->quiz->questions->count() }}</p>
+                        <p class="text-[9px] text-slate-500">Soru</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-800/60 border border-slate-700/60 px-2 py-1.5 text-center">
+                        <p class="text-base font-black text-amber-300">{{ $session->time_limit }}<span class="text-[10px] font-normal text-slate-500">sn</span></p>
+                        <p class="text-[9px] text-slate-500">Süre</p>
+                    </div>
+                </div>
+
+                {{-- Bağlantı URL --}}
+                <button type="button"
+                        onclick="copyJoinUrl(this)"
+                        data-join-url="@json(route('participant.join', $session->code))"
+                        class="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-1.5
+                               text-[10px] text-sky-400 hover:border-sky-500 hover:text-sky-300
+                               transition-colors text-center font-medium">
+                    Bağlantıyı Kopyala
+                </button>
+            </div>
+        </div>
+
+        {{-- Hızlı Linkler --}}
+        <div class="grid grid-cols-2 gap-2">
+            <a href="{{ route('remote.qr', $session->admin_token) }}" target="_blank"
+               class="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/60
+                      px-3 py-2 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-300 transition-colors">
+                <span>📱</span> Tam Ekran QR
+            </a>
+            <a href="{{ route('display.show', $session->code) }}" target="_blank"
+               class="flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/10
+                      px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/20 transition-colors">
+                <span>📺</span> Sunum Ekranı
+            </a>
         </div>
     </section>
 
-    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-lg space-y-4">
-        <header class="flex items-start justify-between gap-4">
-            <div>
-                <h2 class="text-sm font-semibold mb-0.5">Akışı Yönet</h2>
-                <p class="text-[11px] text-slate-400">{{ $session->quiz->title }} · <span class="font-mono text-sky-400">{{ $session->code }}</span></p>
-            </div>
-            <div id="active-question-badge" class="{{ $currentQuestion ? '' : 'invisible' }} text-right text-[11px] text-slate-400 shrink-0">
-                <div>Aktif soru</div>
-                <div id="active-question-label" class="text-sky-300 font-semibold">
-                    {{ $currentQuestion ? '#'.$currentQuestion->position.' · '.$currentQuestion->points.'p' : '' }}
-                </div>
-            </div>
-        </header>
+    {{-- ── Kontrol Kartı ── --}}
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg space-y-4">
 
-        <div class="grid grid-cols-4 gap-2">
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-black text-white">🎛️ Akışı Yönet</h2>
+                <p class="text-[11px] text-slate-400 mt-0.5">{{ $session->quiz->title }}</p>
+            </div>
+            <div id="active-question-badge"
+                 class="{{ $currentQuestion ? '' : 'invisible' }} shrink-0 text-right rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5">
+                <p class="text-[9px] text-slate-500 leading-none mb-0.5">Aktif Soru</p>
+                <p id="active-question-label" class="text-sm font-black text-sky-300">
+                    {{ $currentQuestion ? '#'.$currentQuestion->position.' · '.$currentQuestion->points.'p' : '' }}
+                </p>
+            </div>
+        </div>
+
+        {{-- Ana Navigasyon Butonları --}}
+        <div class="grid grid-cols-2 gap-2.5">
             <button data-mode="prev"
-                    class="ctrl-btn rounded-xl border border-slate-700 bg-slate-900/80 px-2 py-3 text-xs font-medium hover:border-sky-500 active:scale-95 transition-transform">
+                    class="ctrl-btn flex items-center justify-center gap-2 rounded-2xl
+                           border border-slate-700 bg-slate-800/60
+                           py-4 text-sm font-bold text-slate-300
+                           hover:border-slate-500 hover:text-white transition-colors">
                 ← Önceki
             </button>
             <button data-mode="next"
-                    class="ctrl-btn rounded-xl bg-sky-500 px-2 py-3 text-xs font-semibold text-white hover:bg-sky-400 active:scale-95 transition-transform">
+                    class="ctrl-btn flex items-center justify-center gap-2 rounded-2xl
+                           bg-gradient-to-r from-sky-500 to-sky-400
+                           py-4 text-sm font-black text-white shadow-lg shadow-sky-500/25
+                           hover:from-sky-400 hover:to-sky-300 transition-colors">
                 Sıradaki →
-            </button>
-            <button data-mode="reveal"
-                    class="ctrl-btn rounded-xl border border-amber-500/60 bg-amber-500/10 px-2 py-3 text-xs font-medium text-amber-200 hover:bg-amber-500/20 active:scale-95 transition-transform">
-                Cevabı Göster
-            </button>
-            <button data-mode="show_results"
-                    class="ctrl-btn rounded-xl border border-emerald-500/60 bg-emerald-500/10 px-2 py-3 text-xs font-medium text-emerald-200 hover:bg-emerald-500/20 active:scale-95 transition-transform">
-                Sonuçlar
             </button>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-1">
-            <div class="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2">
-                <span class="text-[10px] text-slate-400 shrink-0">Süre:</span>
+        {{-- Reveal + Sonuçlar --}}
+        <div class="grid grid-cols-2 gap-2.5">
+            <button data-mode="reveal"
+                    class="ctrl-btn flex items-center justify-center gap-2 rounded-2xl
+                           border border-amber-500/50 bg-amber-500/10
+                           py-3.5 text-sm font-bold text-amber-200
+                           hover:bg-amber-500/20 transition-colors">
+                💡 Cevabı Göster
+            </button>
+            <button data-mode="show_results"
+                    class="ctrl-btn flex items-center justify-center gap-2 rounded-2xl
+                           border border-emerald-500/50 bg-emerald-500/10
+                           py-3.5 text-sm font-bold text-emerald-200
+                           hover:bg-emerald-500/20 transition-colors">
+                🏆 Sonuçlar
+            </button>
+        </div>
+
+        {{-- Süre + Kilit --}}
+        <div class="grid grid-cols-2 gap-2.5">
+            <div class="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2.5">
+                <span class="text-xs text-slate-500 shrink-0">⏱</span>
                 <input id="timer-input" type="number" min="0" max="600" value="{{ $session->time_limit }}"
-                       class="w-14 bg-transparent text-xs text-slate-200 outline-none font-mono text-right">
-                <span class="text-[10px] text-slate-500">sn</span>
+                       class="flex-1 w-0 min-w-0 bg-transparent text-sm text-white outline-none font-mono">
+                <span class="text-[10px] text-slate-500 shrink-0">sn</span>
                 <button id="timer-save-btn"
-                        class="ml-auto text-[10px] text-sky-400 hover:text-sky-300 font-medium">
+                        class="shrink-0 rounded-lg bg-sky-500/20 border border-sky-500/30 px-2 py-1
+                               text-[10px] text-sky-300 hover:bg-sky-500/30 font-semibold transition-colors">
                     Kaydet
                 </button>
             </div>
-
             <button id="lock-btn"
-                    class="rounded-xl border px-3 py-2 text-xs font-medium transition-colors active:scale-95
+                    class="rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors
                            {{ $session->answers_locked
-                               ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200'
-                               : 'border-rose-500/60 bg-rose-500/10 text-rose-200' }}">
-                <span id="lock-label">{{ $session->answers_locked ? 'Cevapları Aç' : 'Cevapları Kilitle' }}</span>
+                               ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-200'
+                               : 'border-rose-500/50 bg-rose-500/10 text-rose-200' }}">
+                <span id="lock-label">{{ $session->answers_locked ? '🔓 Cevapları Aç' : '🔒 Kilitle' }}</span>
             </button>
+        </div>
 
+        {{-- Export + Analitik --}}
+        <div class="grid grid-cols-2 gap-2.5">
             <a href="{{ route('remote.export', $session->admin_token) }}"
-               class="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[10px] text-slate-300 hover:border-emerald-500 hover:text-emerald-300 transition-colors">
-                CSV İndir
+               class="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/60
+                      px-3 py-2 text-xs text-slate-300 hover:border-emerald-500 hover:text-emerald-300 transition-colors">
+                📊 CSV İndir
             </a>
             <a href="{{ route('remote.analytics', $session->admin_token) }}"
-               class="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[10px] text-slate-300 hover:border-violet-500 hover:text-violet-300 transition-colors">
-                Analitik
+               class="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/60
+                      px-3 py-2 text-xs text-slate-300 hover:border-violet-500 hover:text-violet-300 transition-colors">
+                📈 Analitik
             </a>
         </div>
 
-        <div id="ctrl-loading" class="hidden text-center text-[10px] text-sky-400">
-            İşleniyor…
-        </div>
-
-        <div class="pt-3 border-t border-slate-800/70">
-            <div class="grid grid-cols-2 gap-3 max-h-44 overflow-y-auto pr-1">
-                <div class="space-y-1" id="question-list">
-                    @foreach($session->quiz->questions as $q)
-                        <button data-mode="goto" data-question-id="{{ $q->id }}"
-                                class="ctrl-btn question-item w-full text-left rounded-lg border px-2 py-1.5 text-[10px]
-                                       {{ $currentQuestion && $currentQuestion->id === $q->id
-                                            ? 'border-sky-500 bg-sky-500/10 text-sky-100'
-                                            : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-sky-500' }}">
-                            <span class="font-semibold">#{{ $q->position }}</span>
-                            <span class="text-slate-400 ml-1">({{ $q->points }}p)</span>
-                            <span class="ml-1">{{ \Illuminate\Support\Str::limit($q->text, 32) }}</span>
-                        </button>
-                    @endforeach
-                </div>
-
-                <div>
-                    <div class="text-[10px] text-slate-400 mb-1">Katılımcılar</div>
-                    <ul id="participant-list" class="space-y-1 text-[10px] text-slate-300">
-                        @foreach($session->participants as $p)
-                            <li data-id="{{ $p->id }}"
-                                class="flex items-center justify-between rounded-md bg-slate-900/70 px-2 py-1 group">
-                                <div class="min-w-0 flex-1">
-                                    <span class="truncate block">{{ $p->name }}</span>
-                                    @if($p->team_name)
-                                        <span class="text-[9px] text-slate-500 truncate block">{{ $p->team_name }}</span>
-                                    @endif
-                                </div>
-                                <div class="flex items-center gap-1 ml-2 shrink-0">
-                                    <span class="font-mono text-slate-500 score-display">{{ $p->total_score }}p</span>
-                                    <button data-participant-id="{{ $p->id }}"
-                                            class="kick-btn hidden group-hover:flex items-center justify-center
-                                                   h-4 w-4 rounded text-[9px] text-rose-400 hover:bg-rose-500/20 transition-colors"
-                                            title="Oturumdan çıkar">x</button>
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            </div>
+        <div id="ctrl-loading" class="hidden text-center text-xs text-sky-400 py-1">
+            ⏳ İşleniyor…
         </div>
     </section>
 </div>
 
+{{-- ──────────── ORTA BÖLÜM: Soru Listesi + Katılımcılar ──────────── --}}
 <div class="grid gap-4 lg:grid-cols-2">
-    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-lg space-y-4">
-        <header class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold">Anlık Cevaplar</h2>
-            <span class="text-[11px] text-slate-400">Toplam: <span id="total-answers-count" class="text-sky-300 font-semibold">{{ $initialTotal }}</span></span>
-        </header>
+
+    {{-- Soru Listesi --}}
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">📋 Sorular</h3>
+        <div id="question-list" class="space-y-1 max-h-48 overflow-y-auto pr-1">
+            @foreach($session->quiz->questions as $q)
+                <button data-mode="goto" data-question-id="{{ $q->id }}"
+                        class="ctrl-btn question-item w-full text-left rounded-xl border px-3 py-2 text-[11px]
+                               transition-colors
+                               {{ $currentQuestion && $currentQuestion->id === $q->id
+                                    ? 'border-sky-500/60 bg-sky-500/10 text-sky-200'
+                                    : 'border-slate-800/80 bg-slate-900/60 text-slate-300 hover:border-sky-500/40 hover:bg-sky-500/5' }}">
+                    <span class="font-black text-sky-400">#{{ $q->position }}</span>
+                    <span class="text-slate-500 ml-1 text-[10px]">({{ $q->points }}p)</span>
+                    <span class="ml-1.5">{{ \Illuminate\Support\Str::limit($q->text, 40) }}</span>
+                </button>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- Katılımcılar --}}
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">👥 Katılımcılar</h3>
+        <ul id="participant-list" class="space-y-1 max-h-48 overflow-y-auto pr-1 text-[11px]">
+            @foreach($session->participants as $p)
+                <li data-id="{{ $p->id }}"
+                    class="flex items-center gap-2 rounded-xl bg-slate-800/50 border border-slate-700/50
+                           px-3 py-2 group hover:border-slate-600 transition-colors">
+                    <div class="min-w-0 flex-1">
+                        <span class="truncate block text-slate-200 font-medium">{{ $p->name }}</span>
+                        @if($p->team_name)
+                            <span class="text-[9px] text-violet-400 truncate block">{{ $p->team_name }}</span>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <span class="font-mono text-sky-400 font-semibold score-display">{{ $p->total_score }}p</span>
+                        <button data-participant-id="{{ $p->id }}"
+                                class="kick-btn hidden group-hover:flex items-center justify-center
+                                       h-5 w-5 rounded-lg text-[10px] text-rose-400
+                                       hover:bg-rose-500/20 border border-rose-500/30 transition-colors"
+                                title="Oturumdan çıkar">✕</button>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+    </section>
+</div>
+
+{{-- ──────────── ALT BÖLÜM: Cevap Grafikleri + Sıralama ──────────── --}}
+<div class="grid gap-4 lg:grid-cols-2">
+
+    {{-- Anlık Cevaplar --}}
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-sm font-black text-white">📊 Anlık Cevaplar</h2>
+            <span class="rounded-full bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 text-[11px] text-sky-300 font-semibold">
+                Toplam: <span id="total-answers-count">{{ $initialTotal }}</span>
+            </span>
+        </div>
 
         @foreach([
-            'A' => ['sky-500',    'sky-400'],
-            'B' => ['violet-500', 'violet-400'],
-            'C' => ['amber-500',  'amber-400'],
-            'D' => ['rose-500',   'rose-400'],
-        ] as $opt => [$barColor, $labelColor])
+            'A' => ['sky-500',    'sky-400',    'bg-sky-500'],
+            'B' => ['violet-500', 'violet-400', 'bg-violet-500'],
+            'C' => ['amber-500',  'amber-400',  'bg-amber-500'],
+            'D' => ['rose-500',   'rose-400',   'bg-rose-500'],
+        ] as $opt => [$barColor, $labelColor, $bgClass])
             @php
                 $n   = $initialCounts[$opt] ?? 0;
                 $pct = $initialTotal > 0 ? round($n / $initialTotal * 100) : 0;
             @endphp
-            <div class="space-y-1">
+            <div class="space-y-1.5">
                 <div class="flex items-center justify-between text-xs">
-                    <span class="font-bold text-{{ $labelColor }} w-5">{{ $opt }}</span>
                     <div class="flex items-center gap-2">
-                        <span id="pct-{{ $opt }}" class="text-slate-500 text-[10px] w-8 text-right">{{ $pct }}%</span>
-                        <span id="count-{{ $opt }}" class="text-slate-300 font-semibold w-4 text-right">{{ $n }}</span>
+                        <span class="h-6 w-6 rounded-lg {{ $bgClass }} flex items-center justify-center text-white text-[10px] font-black">{{ $opt }}</span>
+                        <div class="w-32 h-2 rounded-full bg-slate-800 overflow-hidden">
+                            <div id="bar-{{ $opt }}" class="h-full {{ $bgClass }} transition-all duration-500 ease-out" style="width: {{ $pct }}%"></div>
+                        </div>
                     </div>
-                </div>
-                <div class="w-full rounded-full bg-slate-800 h-3 overflow-hidden">
-                    <div id="bar-{{ $opt }}" class="h-full bg-{{ $barColor }} transition-all duration-500 ease-out" style="width: {{ $pct }}%"></div>
+                    <div class="flex items-center gap-2 text-[11px]">
+                        <span id="pct-{{ $opt }}" class="text-slate-500 w-8 text-right">{{ $pct }}%</span>
+                        <span id="count-{{ $opt }}" class="text-slate-200 font-bold w-4 text-right">{{ $n }}</span>
+                    </div>
                 </div>
             </div>
         @endforeach
     </section>
 
-    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-lg space-y-3">
-        <h2 class="text-sm font-semibold">Canlı Sıralama</h2>
-        <ol id="live-scoreboard" class="space-y-1 text-[11px]">
+    {{-- Canlı Sıralama --}}
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg">
+        <h2 class="text-sm font-black text-white mb-3">🏆 Canlı Sıralama</h2>
+        <ol id="live-scoreboard" class="space-y-1.5">
             @forelse($session->participants()->orderByDesc('total_score')->orderByDesc('total_speed_bonus')->take(10)->get() as $rank => $p)
                 <li data-id="{{ $p->id }}"
-                    class="flex items-center gap-2 rounded-lg px-3 py-1.5
-                           {{ $rank === 0 ? 'bg-yellow-500/10 border border-yellow-500/30' : ($rank === 1 ? 'bg-slate-700/40' : 'bg-slate-900/70') }}">
-                    <span class="w-5 text-center font-bold {{ $rank === 0 ? 'text-yellow-400' : ($rank === 1 ? 'text-slate-300' : 'text-slate-500') }}">{{ $rank + 1 }}.</span>
-                    <span class="flex-1 truncate text-slate-200">{{ $p->name }}{{ $p->team_name ? ' · '.$p->team_name : '' }}</span>
-                    <span class="font-semibold {{ $rank === 0 ? 'text-yellow-300' : 'text-sky-300' }}">{{ $p->total_score }}p</span>
+                    class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[11px]
+                           {{ $rank === 0 ? 'bg-yellow-500/10 border border-yellow-500/30'
+                                         : ($rank === 1 ? 'bg-slate-700/40 border border-slate-700/50'
+                                                        : 'bg-slate-900/60 border border-slate-800/60') }}">
+                    <span class="w-5 text-center font-black text-sm
+                                 {{ $rank === 0 ? 'text-yellow-400' : ($rank === 1 ? 'text-slate-300' : 'text-slate-600') }}">
+                        {{ $rank === 0 ? '🥇' : ($rank === 1 ? '🥈' : ($rank === 2 ? '🥉' : ($rank+1).'.')) }}
+                    </span>
+                    <span class="flex-1 truncate text-slate-200 font-medium">
+                        {{ $p->name }}{{ $p->team_name ? ' · '.$p->team_name : '' }}
+                    </span>
+                    <span class="font-black {{ $rank === 0 ? 'text-yellow-300' : 'text-sky-300' }}">
+                        {{ $p->total_score }}p
+                    </span>
                 </li>
             @empty
-                <li class="text-slate-500 text-center py-3">Henüz katılımcı yok</li>
+                <li class="text-slate-500 text-center py-4 text-xs">Henüz katılımcı yok</li>
             @endforelse
         </ol>
     </section>
 </div>
 
+</div>
 @endsection
 
 @push('scripts')
 <script>
+function copyJoinUrl(btn) {
+    var url = btn.dataset.joinUrl;
+    navigator.clipboard.writeText(url).then(function () {
+        var orig = btn.textContent;
+        btn.textContent = 'Kopyalandı ✓';
+        setTimeout(function () { btn.textContent = orig; }, 1500);
+    });
+}
+
 const ACTION_URL   = @json(route('remote.action', $session->admin_token));
 const LOCK_URL     = @json(route('remote.lock', $session->admin_token));
 const TIMER_URL    = @json(route('remote.timer', $session->admin_token));
@@ -275,9 +372,9 @@ document.getElementById('lock-btn')?.addEventListener('click', async function ()
     if (!data) return;
     const locked = !!data.locked;
     const label  = document.getElementById('lock-label');
-    if (label) label.textContent = locked ? 'Cevapları Aç' : 'Cevapları Kilitle';
-    this.classList.remove('border-emerald-500/60','bg-emerald-500/10','text-emerald-200','border-rose-500/60','bg-rose-500/10','text-rose-200');
-    this.classList.add(...(locked ? ['border-emerald-500/60','bg-emerald-500/10','text-emerald-200'] : ['border-rose-500/60','bg-rose-500/10','text-rose-200']));
+    if (label) label.textContent = locked ? '🔓 Cevapları Aç' : '🔒 Kilitle';
+    this.classList.remove('border-emerald-500/50','bg-emerald-500/10','text-emerald-200','border-rose-500/50','bg-rose-500/10','text-rose-200');
+    this.classList.add(...(locked ? ['border-emerald-500/50','bg-emerald-500/10','text-emerald-200'] : ['border-rose-500/50','bg-rose-500/10','text-rose-200']));
 });
 
 document.getElementById('timer-save-btn')?.addEventListener('click', async function () {
@@ -285,7 +382,7 @@ document.getElementById('timer-save-btn')?.addEventListener('click', async funct
     const data = await ajaxPost(TIMER_URL, { time_limit: val });
     if (data?.ok) {
         const old = this.textContent;
-        this.textContent = 'Kaydedildi';
+        this.textContent = '✓';
         setTimeout(() => { this.textContent = old; }, 1200);
     }
 });
@@ -305,7 +402,8 @@ function updateAnswerBars(counts, total) {
     ['A','B','C','D'].forEach(opt => {
         const n = Number(counts?.[opt] ?? 0);
         const pct = total > 0 ? Math.round(n / total * 100) : 0;
-        document.getElementById('bar-'+opt)?.style && (document.getElementById('bar-'+opt).style.width = pct + '%');
+        const bar = document.getElementById('bar-'+opt);
+        if (bar) bar.style.width = pct + '%';
         const cnt = document.getElementById('count-'+opt); if (cnt) cnt.textContent = n;
         const p = document.getElementById('pct-'+opt); if (p) p.textContent = pct + '%';
     });
@@ -317,16 +415,23 @@ function updateScoreboard(scoreboard) {
     if (!list || !Array.isArray(scoreboard)) return;
     list.innerHTML = '';
     if (!scoreboard.length) {
-        list.innerHTML = '<li class="text-slate-500 text-center py-3">Henüz katılımcı yok</li>';
+        list.innerHTML = '<li class="text-slate-500 text-center py-4 text-xs">Henüz katılımcı yok</li>';
         return;
     }
+    const medals = ['🥇','🥈','🥉'];
+    const rowCls = [
+        'bg-yellow-500/10 border border-yellow-500/30',
+        'bg-slate-700/40 border border-slate-700/50',
+        'bg-slate-900/60 border border-slate-800/60',
+    ];
     scoreboard.forEach((p, i) => {
         const li = document.createElement('li');
-        li.className = 'flex items-center gap-2 rounded-lg px-3 py-1.5 ' + (i===0 ? 'bg-yellow-500/10 border border-yellow-500/30' : (i===1 ? 'bg-slate-700/40' : 'bg-slate-900/70'));
+        li.className = 'flex items-center gap-2.5 rounded-xl px-3 py-2 text-[11px] ' + (rowCls[i] || rowCls[2]);
         const team = p.team_name ? (' · ' + p.team_name) : '';
-        li.innerHTML = `<span class="w-5 text-center font-bold ${i===0?'text-yellow-400':i===1?'text-slate-300':'text-slate-500'}">${i+1}.</span>` +
-                       `<span class="flex-1 truncate text-slate-200">${p.name}${team}</span>` +
-                       `<span class="font-semibold ${i===0?'text-yellow-300':'text-sky-300'}">${p.total_score}p</span>`;
+        const medal = medals[i] || ((i+1)+'.');
+        li.innerHTML = `<span class="w-5 text-center font-black text-sm ${i===0?'text-yellow-400':i===1?'text-slate-300':'text-slate-600'}">${medal}</span>` +
+                       `<span class="flex-1 truncate text-slate-200 font-medium">${p.name}${team}</span>` +
+                       `<span class="font-black ${i===0?'text-yellow-300':'text-sky-300'}">${p.total_score}p</span>`;
         list.appendChild(li);
     });
 }
@@ -342,8 +447,16 @@ function initEcho() {
     const label = document.getElementById('echo-label');
     try {
         const conn = window.Echo.connector.pusher.connection;
-        conn.bind('connected', () => { dot?.classList.replace('bg-slate-600','bg-emerald-500'); if (label) label.textContent = 'Canlı bağlantı aktif'; });
-        conn.bind('disconnected', () => { dot?.classList.replace('bg-emerald-500','bg-red-500'); if (label) label.textContent = 'Bağlantı kesildi'; });
+        conn.bind('connected', () => {
+            dot?.classList.remove('bg-slate-600','bg-red-500');
+            dot?.classList.add('bg-emerald-500');
+            if (label) label.textContent = 'Canlı bağlantı aktif';
+        });
+        conn.bind('disconnected', () => {
+            dot?.classList.remove('bg-slate-600','bg-emerald-500');
+            dot?.classList.add('bg-red-500');
+            if (label) label.textContent = 'Bağlantı kesildi';
+        });
     } catch (e) {}
 
     window.Echo.channel('quiz.session.' + SESSION_CODE)
@@ -355,11 +468,11 @@ function initEcho() {
                 if (list && !list.querySelector(`[data-id="${e.participant.id}"]`)) {
                     const li = document.createElement('li');
                     li.setAttribute('data-id', e.participant.id);
-                    li.className = 'flex items-center justify-between rounded-md bg-slate-900/70 px-2 py-1 group';
-                    const team = e.participant.team_name ? `<span class="text-[9px] text-slate-500 truncate block">${e.participant.team_name}</span>` : '';
-                    li.innerHTML = `<div class="min-w-0 flex-1"><span class="truncate block">${e.participant.name}</span>${team}</div>` +
-                                   `<div class="flex items-center gap-1 ml-2 shrink-0"><span class="font-mono text-slate-500 score-display">0p</span>` +
-                                   `<button data-participant-id="${e.participant.id}" class="kick-btn hidden group-hover:flex items-center justify-center h-4 w-4 rounded text-[9px] text-rose-400 hover:bg-rose-500/20" title="Oturumdan çıkar">x</button></div>`;
+                    li.className = 'flex items-center gap-2 rounded-xl bg-slate-800/50 border border-slate-700/50 px-3 py-2 group hover:border-slate-600 transition-colors';
+                    const team = e.participant.team_name ? `<span class="text-[9px] text-violet-400 truncate block">${e.participant.team_name}</span>` : '';
+                    li.innerHTML = `<div class="min-w-0 flex-1"><span class="truncate block text-slate-200 font-medium">${e.participant.name}</span>${team}</div>` +
+                                   `<div class="flex items-center gap-1.5 shrink-0"><span class="font-mono text-sky-400 font-semibold score-display">0p</span>` +
+                                   `<button data-participant-id="${e.participant.id}" class="kick-btn hidden group-hover:flex items-center justify-center h-5 w-5 rounded-lg text-[10px] text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 transition-colors" title="Oturumdan çıkar">✕</button></div>`;
                     list.appendChild(li);
                 }
             }
@@ -375,10 +488,10 @@ function initEcho() {
         .listen('.AnswersLocked', (e) => {
             const lockBtn = document.getElementById('lock-btn');
             const lockLbl = document.getElementById('lock-label');
-            if (lockLbl) lockLbl.textContent = e.locked ? 'Cevapları Aç' : 'Cevapları Kilitle';
+            if (lockLbl) lockLbl.textContent = e.locked ? '🔓 Cevapları Aç' : '🔒 Kilitle';
             if (lockBtn) {
-                lockBtn.classList.remove('border-emerald-500/60','bg-emerald-500/10','text-emerald-200','border-rose-500/60','bg-rose-500/10','text-rose-200');
-                lockBtn.classList.add(...(e.locked ? ['border-emerald-500/60','bg-emerald-500/10','text-emerald-200'] : ['border-rose-500/60','bg-rose-500/10','text-rose-200']));
+                lockBtn.classList.remove('border-emerald-500/50','bg-emerald-500/10','text-emerald-200','border-rose-500/50','bg-rose-500/10','text-rose-200');
+                lockBtn.classList.add(...(e.locked ? ['border-emerald-500/50','bg-emerald-500/10','text-emerald-200'] : ['border-rose-500/50','bg-rose-500/10','text-rose-200']));
             }
         });
 }

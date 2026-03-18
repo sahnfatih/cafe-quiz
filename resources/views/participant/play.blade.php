@@ -353,14 +353,28 @@ document.querySelectorAll('.answer-btn').forEach(btn => {
                 headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF_TOKEN,'X-Requested-With':'XMLHttpRequest'},
                 body: JSON.stringify({ selected_option:sel, client_sent_at:Date.now() }),
             });
-            const data = await res.json().catch(()=>({}));
-            if (data.ok===false) {
+            // JSON parse başarısız olursa hata bilgisi al (419 CSRF, 500 server error vs.)
+            let data = {};
+            try { data = await res.json(); } catch(e) { data = {ok: false, message: 'Sunucu hatası (HTTP ' + res.status + ')'}; }
+
+            if (!res.ok || data.ok === false) {
+                // Cevap kabul edilmedi — retry'a izin ver
                 hasAnsweredCurrent=false; mySelectedOption=null;
                 clearAnswerHighlight(); setButtonsDisabled(false);
                 waitingOverlay.classList.add('hidden');
-                statusEl.textContent=data.message||'Cevap gönderilemedi.';
+                const msg = data.message || ('Hata: HTTP ' + res.status);
+                statusEl.textContent = msg;
+                console.warn('Cevap gönderilemedi:', res.status, data);
             }
-        } catch(err) { console.error(err); }
+            // ok===true ise: cevap alındı, waiting overlay kalır
+        } catch(err) {
+            // Ağ hatası
+            hasAnsweredCurrent=false; mySelectedOption=null;
+            clearAnswerHighlight(); setButtonsDisabled(false);
+            waitingOverlay.classList.add('hidden');
+            statusEl.textContent = '⚠️ Ağ hatası, tekrar dene.';
+            console.error('Fetch error:', err);
+        }
     });
 });
 

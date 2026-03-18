@@ -21,8 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         // Oyuncu cevap rotası CSRF'ten muaf (participant ID + session code = yeterli güvenlik)
+        // Rota: /play/{code}/{participant}/answer — iki segment olduğu için play/*/*/answer
         $middleware->validateCsrfTokens(except: [
-            'play/*/answer',
+            'play/*/*/answer',
             'join/*',
         ]);
     })

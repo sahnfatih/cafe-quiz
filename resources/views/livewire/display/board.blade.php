@@ -76,21 +76,24 @@
         </div>
 
         {{-- Medya alanı --}}
-        <div class="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
+        <div class="flex-1 flex items-center justify-center min-h-0 overflow-hidden py-2">
             @if($question && ($question['media_type'] ?? 'none') === 'image' && !empty($question['image_path']))
                 <img id="b-media-img"
                      src="{{ asset('storage/'.($question['image_path'])) }}" alt=""
-                     class="max-h-full max-w-full rounded-2xl shadow-lg object-contain"
+                     class="h-full w-full rounded-2xl shadow-2xl object-contain"
+                     style="max-height:38vh"
                      wire:key="img-{{ $question['id'] ?? 0 }}">
             @elseif($question && ($question['media_type'] ?? 'none') === 'video' && !empty($question['video_path']))
                 <video id="b-media-video"
                        src="{{ asset('storage/'.($question['video_path'])) }}"
                        autoplay muted controls
-                       class="max-h-full max-w-full rounded-2xl shadow-lg"
+                       class="rounded-2xl shadow-2xl"
+                       style="max-height:38vh;max-width:100%"
                        wire:key="vid-{{ $question['id'] ?? 0 }}">
                 </video>
             @elseif($question && ($question['media_type'] ?? 'none') === 'youtube' && $videoUrl)
-                <div class="w-full h-full rounded-2xl overflow-hidden shadow-lg max-h-80 max-w-4xl"
+                <div class="w-full rounded-2xl overflow-hidden shadow-2xl"
+                     style="max-height:38vh;aspect-ratio:16/9"
                      wire:key="yt-{{ $question['id'] ?? 0 }}">
                     <iframe class="w-full h-full" src="{{ $videoUrl }}" frameborder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

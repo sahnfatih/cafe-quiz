@@ -393,10 +393,10 @@ class PresentationController extends Controller
                 : back();
         }
 
-        // Zaman sınırı kontrolü (server-side)
+        // Zaman sınırı kontrolü (server-side) — 8 saniyelik tolerans
         if ($session->time_limit > 0 && $session->current_question_started_at) {
             $elapsedSeconds = $session->current_question_started_at->diffInSeconds(now());
-            if ($elapsedSeconds > $session->time_limit) {
+            if ($elapsedSeconds > ($session->time_limit + 8)) {
                 return $request->wantsJson()
                     ? response()->json(['ok' => false, 'message' => 'Süre doldu.'], 422)
                     : back();

@@ -28,7 +28,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/quizzes', [QuizController::class, 'index'])->name('admin.quizzes.index');
     Route::post('/admin/quizzes', [QuizController::class, 'store'])->name('admin.quizzes.store');
     Route::get('/admin/quizzes/{quiz}', [QuizController::class, 'show'])->name('admin.quizzes.show');
+    Route::put('/admin/quizzes/{quiz}', [QuizController::class, 'update'])->name('admin.quizzes.update');
+    Route::delete('/admin/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('admin.quizzes.destroy');
     Route::post('/admin/quizzes/{quiz}/questions', [QuizController::class, 'addQuestion'])->name('admin.quizzes.questions.store');
+    Route::put('/admin/quizzes/{quiz}/questions/{question}', [QuizController::class, 'updateQuestion'])->name('admin.quizzes.questions.update');
+    Route::delete('/admin/quizzes/{quiz}/questions/{question}', [QuizController::class, 'destroyQuestion'])->name('admin.quizzes.questions.destroy');
 
     // Sunumu başlat / oturum oluşturma
     Route::post('/admin/quizzes/{quiz}/start-session', [PresentationController::class, 'startSession'])

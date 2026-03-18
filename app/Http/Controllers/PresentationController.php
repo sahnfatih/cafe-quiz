@@ -142,14 +142,27 @@ class PresentationController extends Controller
 
         } elseif ($mode === 'reveal') {
             $targetQuestion = $current; // sadece cevabı yayınla
+
+        } elseif ($mode === 'lobby') {
+            // Bekleme ekranına geri dön
+            $session->status                      = 'pending';
+            $session->current_question_id         = null;
+            $session->current_question_started_at = null;
+            $session->answers_locked              = false;
+            $session->save();
+
+        } elseif ($mode === 'show_all_results') {
+            // Tüm sonuçları göster — oturumu bitirmez, sadece broadcast eder
+            // (Sunumu bitirmek için ayrıca 'finish' kullanılır)
         }
 
         $top = [];
-        if ($mode === 'show_results' || $mode === 'finish') {
+        if (in_array($mode, ['show_results', 'finish', 'show_all_results'])) {
+            $limit = ($mode === 'show_all_results') ? 999 : 3;
             $top = $session->participants()
                 ->orderByDesc('total_score')
                 ->orderByDesc('total_speed_bonus')
-                ->take(3)
+                ->take($limit)
                 ->get(['name', 'team_name', 'total_score', 'total_speed_bonus'])
                 ->map(fn ($p) => [
                     'name'              => $p->name,
@@ -160,7 +173,8 @@ class PresentationController extends Controller
                 ->toArray();
         }
 
-        $questionModel = $targetQuestion ?? $current;
+        // lobby modunda soru null — bekleme ekranına dön
+        $questionModel = ($mode === 'lobby') ? null : ($targetQuestion ?? $current);
 
         event(new QuizStateUpdated($session->fresh(), $questionModel, $mode, $top));
 

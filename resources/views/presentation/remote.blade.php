@@ -140,21 +140,53 @@
             </button>
         </div>
 
-        {{-- Reveal + Sonuçlar --}}
+        {{-- Soru Kontrolü --}}
         <div class="grid grid-cols-2 gap-2.5">
             <button data-mode="reveal"
-                    class="ctrl-btn flex items-center justify-center gap-2 rounded-2xl
+                    class="ctrl-btn flex items-center justify-center gap-1.5 rounded-2xl
                            border border-amber-500/50 bg-amber-500/10
-                           py-3.5 text-sm font-bold text-amber-200
-                           hover:bg-amber-500/20 transition-colors">
+                           py-3 text-sm font-bold text-amber-200
+                           hover:bg-amber-500/20 active:scale-95 transition-all">
                 💡 Cevabı Göster
             </button>
             <button data-mode="show_results"
-                    class="ctrl-btn flex items-center justify-center gap-2 rounded-2xl
+                    class="ctrl-btn flex items-center justify-center gap-1.5 rounded-2xl
                            border border-emerald-500/50 bg-emerald-500/10
-                           py-3.5 text-sm font-bold text-emerald-200
-                           hover:bg-emerald-500/20 transition-colors">
-                🏆 Sonuçlar
+                           py-3 text-sm font-bold text-emerald-200
+                           hover:bg-emerald-500/20 active:scale-95 transition-all">
+                🥇 Top 3
+            </button>
+        </div>
+
+        {{-- ─── Sunum Yönetimi ─── --}}
+        <div class="rounded-2xl border border-slate-700/60 bg-slate-800/30 p-3 space-y-2.5">
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">🎬 Sunum Yönetimi</p>
+
+            {{-- Bekleme ekranına dön --}}
+            <button data-mode="lobby"
+                    class="ctrl-btn w-full flex items-center justify-center gap-2 rounded-xl
+                           border border-sky-700/60 bg-sky-900/30
+                           py-2.5 text-sm font-bold text-sky-300
+                           hover:bg-sky-800/40 hover:border-sky-500/70 active:scale-95 transition-all">
+                🏠 Bekleme Ekranına Dön
+            </button>
+
+            {{-- Tüm sonuçları göster --}}
+            <button data-mode="show_all_results"
+                    class="ctrl-btn w-full flex items-center justify-center gap-2 rounded-xl
+                           border border-violet-500/50 bg-violet-500/10
+                           py-2.5 text-sm font-bold text-violet-200
+                           hover:bg-violet-500/20 active:scale-95 transition-all">
+                🎊 Tüm Sonuçları Göster
+            </button>
+
+            {{-- Sunumu bitir --}}
+            <button id="finish-btn"
+                    class="ctrl-btn w-full flex items-center justify-center gap-2 rounded-xl
+                           border border-rose-700/50 bg-rose-900/20
+                           py-2.5 text-sm font-bold text-rose-400
+                           hover:bg-rose-800/30 hover:border-rose-500/70 active:scale-95 transition-all">
+                🏁 Sunumu Bitir
             </button>
         </div>
 
@@ -194,7 +226,7 @@
             </a>
         </div>
 
-        <div id="ctrl-loading" class="hidden text-center text-xs text-sky-400 py-1">
+        <div id="ctrl-loading" class="hidden text-center text-xs text-sky-400 py-1 animate-pulse">
             ⏳ İşleniyor…
         </div>
     </section>
@@ -367,6 +399,12 @@ document.querySelectorAll('.ctrl-btn').forEach(btn => {
     });
 });
 
+/* Sunumu Bitir — onay dialogu */
+document.getElementById('finish-btn')?.addEventListener('click', () => {
+    if (!confirm('Sunumu bitirmek istediğinizden emin misiniz?\nBu işlem geri alınamaz.')) return;
+    ajaxPost(ACTION_URL, { mode: 'finish' });
+});
+
 document.getElementById('lock-btn')?.addEventListener('click', async function () {
     const data = await ajaxPost(LOCK_URL);
     if (!data) return;
@@ -442,6 +480,38 @@ function updateParticipantScore(participant) {
     if (el) el.textContent = participant.total_score + 'p';
 }
 
+/* ─── Remote: aktif soru badge + soru listesi güncelle ─── */
+function updateActiveQuestionUI(questionId, questionPosition, questionPoints) {
+    const badge = document.getElementById('active-question-badge');
+    const label = document.getElementById('active-question-label');
+
+    if (!questionId) {
+        if (badge) badge.classList.add('invisible');
+        if (label) label.textContent = '';
+    } else {
+        if (badge) badge.classList.remove('invisible');
+        if (label) label.textContent = '#' + questionPosition + ' · ' + questionPoints + 'p';
+    }
+
+    // Soru listesinde aktif olanı vurgula
+    document.querySelectorAll('.question-item').forEach(btn => {
+        const qid = Number(btn.dataset.questionId);
+        if (qid === questionId) {
+            btn.className = btn.className.replace(/border-slate-\S+|bg-slate-\S+|text-slate-\S+|hover:\S+/g, '');
+            btn.classList.add('border-sky-500/60', 'bg-sky-500/10', 'text-sky-200');
+        } else {
+            btn.classList.remove('border-sky-500/60', 'bg-sky-500/10', 'text-sky-200');
+            btn.classList.add('border-slate-800/80', 'bg-slate-900/60', 'text-slate-300',
+                              'hover:border-sky-500/40', 'hover:bg-sky-500/5');
+        }
+    });
+}
+
+/* ─── Cevap barlarını sıfırla ─── */
+function resetAnswerBars() {
+    updateAnswerBars({ A:0, B:0, C:0, D:0 }, 0);
+}
+
 function initEcho() {
     const dot = document.getElementById('echo-dot');
     const label = document.getElementById('echo-label');
@@ -460,6 +530,25 @@ function initEcho() {
     } catch (e) {}
 
     window.Echo.channel('quiz.session.' + SESSION_CODE)
+        /* ─── Quiz durumu güncellendi: remote kendi UI'ını senkronize eder ─── */
+        .listen('.QuizStateUpdated', (e) => {
+            const q    = e.question;
+            const mode = e.mode;
+
+            if (mode === 'lobby' || !q) {
+                // Bekleme ekranı — aktif soruyu temizle
+                updateActiveQuestionUI(null, null, null);
+                resetAnswerBars();
+            } else if (mode === 'next' || mode === 'prev' || mode === 'goto' || mode === 'start') {
+                // Yeni soru — badge güncelle, barları sıfırla
+                updateActiveQuestionUI(q.id, q.position, q.points);
+                resetAnswerBars();
+            } else if (mode === 'show_results' || mode === 'finish' || mode === 'show_all_results') {
+                // Sunum bitti — badge temizle
+                updateActiveQuestionUI(null, null, null);
+            }
+            // reveal: badge değişmez
+        })
         .listen('.ParticipantJoined', (e) => {
             const cnt = document.getElementById('participant-count');
             if (cnt && e.total != null) cnt.textContent = e.total;

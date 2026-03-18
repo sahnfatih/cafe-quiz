@@ -20,6 +20,7 @@ class Question extends Model
         'points',
         'media_type',
         'image_path',
+        'video_path',
         'youtube_url',
         'youtube_start',
         'youtube_end',

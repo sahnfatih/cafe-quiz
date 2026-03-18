@@ -61,8 +61,8 @@ class QuizStateUpdated implements ShouldBroadcastNow
                 'youtube_start'  => $this->question->youtube_start,
                 'youtube_end'    => $this->question->youtube_end,
                 'points'         => $this->question->points,
-                // Doğru cevap sadece reveal/show_results/finish modunda açıklanır
-                'correct_option' => in_array($this->mode, ['reveal', 'show_results', 'finish'])
+                // Doğru cevap reveal ve sonuç modlarında açıklanır
+                'correct_option' => in_array($this->mode, ['reveal', 'show_results', 'finish', 'show_all_results'])
                     ? $this->question->correct_option
                     : null,
             ] : null,

@@ -1,6 +1,13 @@
 # ── Stage 1: Frontend Build (Node.js) ─────────────────────
 FROM node:20-bullseye-slim AS frontend
 
+# Pusher public key'leri build-time'da gerekli (VITE_ prefix)
+ARG VITE_PUSHER_APP_KEY=6e9cc3f14f25a174f012
+ARG VITE_PUSHER_APP_CLUSTER=eu
+
+ENV VITE_PUSHER_APP_KEY=$VITE_PUSHER_APP_KEY
+ENV VITE_PUSHER_APP_CLUSTER=$VITE_PUSHER_APP_CLUSTER
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci

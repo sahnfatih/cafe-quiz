@@ -1,8 +1,18 @@
-FROM php:8.2-cli
+# ── Stage 1: Frontend Build (Node.js) ─────────────────────
+FROM node:20-bullseye-slim AS frontend
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ── Stage 2: PHP Application ───────────────────────────────
+FROM php:8.2-cli-bullseye
 
 # Sistem bağımlılıkları
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip \
+    git curl zip unzip gnupg \
     libpng-dev libpq-dev libxml2-dev libzip-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -12,29 +22,23 @@ RUN docker-php-ext-install pdo pdo_pgsql mbstring xml bcmath gd pcntl zip
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Node.js 20
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # Uygulama dosyaları
 COPY . .
 
+# Frontend build çıktısını kopyala
+COPY --from=frontend /app/public/build ./public/build
+
 # PHP bağımlılıkları
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Frontend build
-RUN npm ci && npm run build
-
-# Storage ve cache klasörleri
+# Storage klasörleri
 RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8000
 
-# Başlangıç komutu
 CMD php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache && \

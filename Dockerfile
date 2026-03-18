@@ -1,10 +1,8 @@
 # ── Stage 1: Frontend Build (Node.js) ─────────────────────
 FROM node:20-bullseye-slim AS frontend
 
-# Pusher public key'leri build-time'da gerekli (VITE_ prefix)
 ARG VITE_PUSHER_APP_KEY=6e9cc3f14f25a174f012
 ARG VITE_PUSHER_APP_CLUSTER=eu
-
 ENV VITE_PUSHER_APP_KEY=$VITE_PUSHER_APP_KEY
 ENV VITE_PUSHER_APP_CLUSTER=$VITE_PUSHER_APP_CLUSTER
 
@@ -17,14 +15,17 @@ RUN npm run build
 # ── Stage 2: PHP Application ───────────────────────────────
 FROM php:8.2-cli-bullseye
 
-# Sistem bağımlılıkları
+# Sistem bağımlılıkları (gd için gerekli tüm kütüphaneler dahil)
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip gnupg \
-    libpng-dev libpq-dev libxml2-dev libzip-dev \
+    git curl zip unzip \
+    libpng-dev libjpeg-dev libfreetype6-dev \
+    libpq-dev libxml2-dev libzip-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# PHP eklentileri (PostgreSQL dahil)
-RUN docker-php-ext-install pdo pdo_pgsql mbstring xml bcmath gd pcntl zip
+# PHP eklentileri
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo pdo_pgsql mbstring xml bcmath pcntl zip gd
 
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

@@ -15,11 +15,12 @@ RUN npm run build
 # ── Stage 2: PHP Application ───────────────────────────────
 FROM php:8.2-cli-bullseye
 
-# Sistem bağımlılıkları (gd için gerekli tüm kütüphaneler dahil)
+# Sistem bağımlılıkları
 RUN apt-get update && apt-get install -y \
     git curl zip unzip \
     libpng-dev libjpeg-dev libfreetype6-dev \
     libpq-dev libxml2-dev libzip-dev \
+    libonig-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP eklentileri

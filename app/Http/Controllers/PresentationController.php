@@ -468,18 +468,28 @@ class PresentationController extends Controller
             ])
             ->toArray();
 
-        event(new AnswerSubmitted(
-            $session,
-            $participant,
-            $data['selected_option'],
-            $question->id,
-            $answerCounts,
-            $totalAnswers,
-            $scoreboard,
-        ));
+        // Broadcast — Pusher hatası olsa bile cevap kaydedildi
+        try {
+            event(new AnswerSubmitted(
+                $session,
+                $participant,
+                $data['selected_option'],
+                $question->id,
+                $answerCounts,
+                $totalAnswers,
+                $scoreboard,
+            ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('AnswerSubmitted broadcast failed: ' . $e->getMessage());
+        }
 
         return $request->wantsJson()
-            ? response()->json(['ok' => true])
+            ? response()->json([
+                'ok'          => true,
+                'is_correct'  => $isCorrect,
+                'base_points' => $basePoints,
+                'speed_bonus' => $speedBonus,
+            ])
             : back();
     }
 }

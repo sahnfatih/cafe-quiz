@@ -19,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO |
             \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB
         );
+
+        // Oyuncu cevap rotası CSRF'ten muaf (participant ID + session code = yeterli güvenlik)
+        $middleware->validateCsrfTokens(except: [
+            'play/*/answer',
+            'join/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

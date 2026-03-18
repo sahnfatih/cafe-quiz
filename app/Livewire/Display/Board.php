@@ -54,18 +54,19 @@ class Board extends Component
         }
 
         $this->question = [
-            'id' => $q->id,
-            'text' => $q->text,
-            'option_a' => $q->option_a,
-            'option_b' => $q->option_b,
-            'option_c' => $q->option_c,
-            'option_d' => $q->option_d,
-            'media_type' => $q->media_type,
-            'image_path' => $q->image_path,
-            'youtube_url' => $q->youtube_url,
-            'youtube_start' => $q->youtube_start,
-            'youtube_end' => $q->youtube_end,
-            'points' => $q->points,
+            'id'           => $q->id,
+            'text'         => $q->text,
+            'option_a'     => $q->option_a,
+            'option_b'     => $q->option_b,
+            'option_c'     => $q->option_c,
+            'option_d'     => $q->option_d,
+            'media_type'   => $q->media_type,
+            'image_path'   => $q->image_path,
+            'video_path'   => $q->video_path,
+            'youtube_url'  => $q->youtube_url,
+            'youtube_start'=> $q->youtube_start,
+            'youtube_end'  => $q->youtube_end,
+            'points'       => $q->points,
         ];
 
         $this->videoUrl = $this->buildYoutubeEmbedUrl(
@@ -120,11 +121,42 @@ class Board extends Component
         $this->session->current_question_id = $payload['session']['current_question_id'] ?? $this->session->current_question_id;
 
         $mode = $payload['mode'] ?? $this->mode;
-        $this->mode           = $mode;
-        $this->topParticipants = $payload['top_participants'] ?? [];
-        $this->timeLimit      = $payload['time_limit']     ?? $this->timeLimit;
-        $this->startedAtMs    = $payload['started_at_ms']  ?? $this->startedAtMs;
-        $this->answersLocked  = $payload['answers_locked'] ?? $this->answersLocked;
+        $this->mode          = $mode;
+        $this->timeLimit     = $payload['time_limit']    ?? $this->timeLimit;
+        $this->startedAtMs   = $payload['started_at_ms'] ?? $this->startedAtMs;
+        $this->answersLocked = $payload['answers_locked'] ?? $this->answersLocked;
+
+        // Tüm sonuçlar modunda DB'den tüm katılımcıları çek
+        if ($mode === 'show_all_results') {
+            $this->topParticipants = $this->session
+                ->participants()
+                ->orderByDesc('total_score')
+                ->orderByDesc('total_speed_bonus')
+                ->get(['name', 'team_name', 'total_score', 'total_speed_bonus'])
+                ->map(fn ($p) => [
+                    'name'              => $p->name,
+                    'team_name'         => $p->team_name,
+                    'total_score'       => $p->total_score,
+                    'total_speed_bonus' => $p->total_speed_bonus,
+                ])
+                ->toArray();
+        } elseif (in_array($mode, ['show_results', 'finish'])) {
+            $this->topParticipants = $this->session
+                ->participants()
+                ->orderByDesc('total_score')
+                ->orderByDesc('total_speed_bonus')
+                ->take(3)
+                ->get(['name', 'team_name', 'total_score', 'total_speed_bonus'])
+                ->map(fn ($p) => [
+                    'name'              => $p->name,
+                    'team_name'         => $p->team_name,
+                    'total_score'       => $p->total_score,
+                    'total_speed_bonus' => $p->total_speed_bonus,
+                ])
+                ->toArray();
+        } else {
+            $this->topParticipants = $payload['top_participants'] ?? [];
+        }
 
         // reveal modunda sadece correct_option ihtiyacı var; soruyu değiştirme
         if ($mode === 'reveal') {
